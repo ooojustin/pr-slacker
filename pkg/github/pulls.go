@@ -26,6 +26,16 @@ type PullRequest struct {
 	Labels     []string
 	Draft      bool
 }
+
+func (pr PullRequest) ToString() string {
+	return fmt.Sprintf(
+		"%s %s %s %s %s",
+		pr.Title,
+		pr.Href,
+		pr.Labels,
+		pr.Created,
+		pr.Creator,
+	)
 }
 
 func (ghc *GithubClient) GetPullRequests(
@@ -110,9 +120,6 @@ func (ghc *GithubClient) loadPullRequestDocument(page int, org string, open bool
 	return doc, true
 }
 
-func generatePullRequestObject(prNode *html.Node) *PullRequest {
-	aTagRepo := prNode.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.
-		NextSibling.NextSibling.NextSibling.FirstChild.NextSibling
 func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	iconBoxNode := prNode.FirstChild.NextSibling.FirstChild.NextSibling
 	iconNode := iconBoxNode.FirstChild.NextSibling
@@ -203,4 +210,16 @@ func getPageCount(doc *goquery.Document) (int, bool) {
 		return 0, false
 	}
 	return count, true
+}
+
+func getPullRequestIDs(doc *goquery.Document) []int {
+	var ids []int
+	idInput := doc.Find("input[name=\"pull_request_id\"]")
+	for _, input := range idInput.Nodes {
+		idStr, _ := utils.GetAttribute(input, "value")
+		if id, err := strconv.Atoi(idStr); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }

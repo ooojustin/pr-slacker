@@ -34,6 +34,6 @@ func main() {
 
 	fmt.Println("LOADED PRS:", len(pullRequests))
 	for _, pr := range pullRequests {
-		fmt.Println(pr.Title, pr.Href, pr.Labels)
+		fmt.Println(pr.ToString())
 	}
 }
