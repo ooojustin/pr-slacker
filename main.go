@@ -26,7 +26,7 @@ func main() {
 
 	// Login to github via the client
 	var login bool = ghc.Login()
-	print("login: ", login)
+	fmt.Println("login: ", login)
 
 	// Load pull requests
 	var pullRequests []*pr_gh.PullRequest

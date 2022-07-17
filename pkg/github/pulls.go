@@ -1,10 +1,16 @@
 package github
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ooojustin/pr-puller/pkg/utils"
@@ -12,10 +18,14 @@ import (
 )
 
 type PullRequest struct {
+	Created    time.Time
+	Creator    string
 	Repository string
 	Title      string
 	Href       string
 	Labels     []string
+	Draft      bool
+}
 }
 
 func (ghc *GithubClient) GetPullRequests(
@@ -63,8 +73,9 @@ func (ghc *GithubClient) loadPullRequests(
 
 	prNodes := getPullRequestNodes(doc)
 	for _, prNode := range prNodes {
-		pr := generatePullRequestObject(prNode)
-		*prs = append(*prs, pr)
+		if pr, ok := generatePullRequestObject(prNode); ok {
+			*prs = append(*prs, pr)
+		}
 	}
 }
 
@@ -102,17 +113,51 @@ func (ghc *GithubClient) loadPullRequestDocument(page int, org string, open bool
 func generatePullRequestObject(prNode *html.Node) *PullRequest {
 	aTagRepo := prNode.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.
 		NextSibling.NextSibling.NextSibling.FirstChild.NextSibling
+func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
+	iconBoxNode := prNode.FirstChild.NextSibling.FirstChild.NextSibling
+	iconNode := iconBoxNode.FirstChild.NextSibling
+
+	lbl, _ := utils.GetAttribute(iconNode, "aria-label")
+	if !strings.HasSuffix(lbl, "pull request") {
+		// It's not actually a pull request
+		return nil, false
+	}
+
+	draft := strings.Contains(lbl, "draft")
+	aTagRepo := iconBoxNode.NextSibling.NextSibling.NextSibling.NextSibling.FirstChild.NextSibling
 	repoName := strings.TrimSpace(aTagRepo.FirstChild.Data)
 	aTagPR := aTagRepo.NextSibling.NextSibling
 	prName := strings.TrimSpace(aTagPR.FirstChild.Data)
 	href, _ := utils.GetAttribute(aTagPR, "href")
 	labels := getPullRequestLabels(aTagPR)
-	return &PullRequest{
+	opened := getPullRequestOpenedNode(aTagPR)
+	datetimeNode := opened.FirstChild.NextSibling
+	datetimeStr, _ := utils.GetAttribute(datetimeNode, "datetime")
+	username := strings.TrimSpace(datetimeNode.NextSibling.NextSibling.FirstChild.Data)
+	datetime, _ := time.Parse(time.RFC3339, datetimeStr)
+
+	pr := &PullRequest{
+		Created:    datetime,
+		Creator:    username,
 		Repository: repoName,
 		Title:      prName,
 		Href:       href,
 		Labels:     labels,
+		Draft:      draft,
 	}
+
+	return pr, true
+}
+
+func getPullRequestOpenedNode(aTagPR *html.Node) *html.Node {
+	for c := aTagPR.NextSibling; c != nil; c = c.NextSibling {
+		class, _ := utils.GetAttribute(c, "class")
+		if c.Data == "div" && strings.Contains(class, "color-fg-muted") {
+			openedBy := c.FirstChild.NextSibling
+			return openedBy
+		}
+	}
+	return nil
 }
 
 func getPullRequestLabels(aTagPR *html.Node) []string {
