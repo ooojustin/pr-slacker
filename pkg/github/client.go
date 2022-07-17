@@ -1,6 +1,7 @@
 package github
 
 import (
+	"fmt"
 	"net/http"
 
 	cookiejar "github.com/juju/persistent-cookiejar"
@@ -14,7 +15,14 @@ type GithubClient struct {
 	client   *http.Client
 }
 
-func NewGithubClient(username string, password string) (*GithubClient, bool) {
+func NewGithubClient(username string, password string, saveCookies bool) (*GithubClient, bool) {
+	opts := &cookiejar.Options{}
+	if saveCookies {
+		opts.Filename = fmt.Sprintf("./%s.json", username)
+	} else {
+		opts.NoPersist = true
+	}
+
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, false
@@ -22,6 +30,9 @@ func NewGithubClient(username string, password string) (*GithubClient, bool) {
 
 	client := &http.Client{
 		Jar: jar,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	return &GithubClient{
