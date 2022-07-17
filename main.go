@@ -1,42 +1,36 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 
 	pr_gh "github.com/ooojustin/pr-puller/pkg/github"
+	"github.com/ooojustin/pr-puller/pkg/utils"
 )
 
 func main() {
-	cfgBytes, err := ioutil.ReadFile("./config.json")
-	if err != nil {
-		panic("failed to read account file")
+	// Load config variables from file
+	cfg, ok := utils.GetConfig()
+	if !ok {
+		panic("failed to load config")
 	}
 
-	var config map[string]interface{}
-	err = json.Unmarshal(cfgBytes, &config)
-	if err != nil {
-		panic("failed to parse account credentials")
-	}
-
-	username := config["username"].(string)
-	password := config["password"].(string)
-	org := config["org"].(string)
-	saveCookies := config["save_cookies"].(bool)
-
-	ghc, ok := pr_gh.NewGithubClient(username, password, saveCookies)
+	// Initialize client used to access github
+	ghc, ok := pr_gh.NewGithubClient(
+		cfg.Username,
+		cfg.Password,
+		cfg.SaveCookies,
+	)
 	if !ok {
 		panic("failed to initialize github client")
 	}
 
+	// Login to github via the client
 	var login bool = ghc.Login()
-	if !login {
-		print("login: ", login)
-	}
+	print("login: ", login)
 
+	// Load pull requests
 	var pullRequests []*pr_gh.PullRequest
-	ghc.GetPullRequests(org, true, &pullRequests)
+	ghc.GetPullRequests(cfg.Org, true, &pullRequests)
 
 	fmt.Println("LOADED PRS:", len(pullRequests))
 	for _, pr := range pullRequests {
