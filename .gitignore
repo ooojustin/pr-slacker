@@ -20,8 +20,5 @@
 # Go workspace file
 go.work
 
-# Account credentials
-account.cfg
-
-# Files with serialized cookie data
+# Files with serialized cookies or config data
 *.json
