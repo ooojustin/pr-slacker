@@ -3,8 +3,10 @@ package utils
 import (
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -40,4 +42,14 @@ func GetAttribute(node *html.Node, key string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func AddFormField(w *multipart.Writer, key string, value string) error {
+	writer, err := w.CreateFormField(key)
+	if err != nil {
+		return err
+	}
+	reader := strings.NewReader(value)
+	_, err = io.Copy(writer, reader)
+	return err
 }
