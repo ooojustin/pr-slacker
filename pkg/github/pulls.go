@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -18,6 +17,7 @@ import (
 )
 
 type PullRequest struct {
+	ID         int
 	Created    time.Time
 	Creator    string
 	Repository string
@@ -25,16 +25,19 @@ type PullRequest struct {
 	Href       string
 	Labels     []string
 	Draft      bool
+	Status     string
 }
 
 func (pr PullRequest) ToString() string {
 	return fmt.Sprintf(
-		"%s %s %s %s %s",
+		"%s %s %s %s %s %s %d",
 		pr.Title,
 		pr.Href,
 		pr.Labels,
 		pr.Created,
 		pr.Creator,
+		pr.Status,
+		pr.ID,
 	)
 }
 
@@ -143,7 +146,16 @@ func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	username := strings.TrimSpace(datetimeNode.NextSibling.NextSibling.FirstChild.Data)
 	datetime, _ := time.Parse(time.RFC3339, datetimeStr)
 
+	var id int
+	if !draft {
+		idInput := opened.NextSibling.NextSibling.FirstChild.NextSibling.FirstChild.NextSibling
+		if prId, ok := utils.GetAttribute(idInput, "value"); ok {
+			id, _ = strconv.Atoi(prId)
+		}
+	}
+
 	pr := &PullRequest{
+		ID:         id,
 		Created:    datetime,
 		Creator:    username,
 		Repository: repoName,
@@ -212,14 +224,6 @@ func getPageCount(doc *goquery.Document) (int, bool) {
 	return count, true
 }
 
-func getPullRequestIDs(doc *goquery.Document) []int {
-	var ids []int
-	idInput := doc.Find("input[name=\"pull_request_id\"]")
-	for _, input := range idInput.Nodes {
-		idStr, _ := utils.GetAttribute(input, "value")
-		if id, err := strconv.Atoi(idStr); err == nil {
-			ids = append(ids, id)
 		}
 	}
-	return ids
 }
