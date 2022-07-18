@@ -12,20 +12,22 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/google/uuid"
 	"github.com/ooojustin/pr-puller/pkg/utils"
 	"golang.org/x/net/html"
 )
 
 type PullRequest struct {
-	ID             int
-	Created        time.Time
-	Creator        string
-	Repository     string
-	Title          string
-	Href           string
-	Labels         []string
-	Draft          bool
-	ReviewDecision string
+	UUID           string    `dynamodbav:"uuid"`
+	ID             int       `dynamodbav:"id"`
+	Created        time.Time `dynamodbav:"created"`
+	Creator        string    `dynamodbav:"creator"`
+	Repository     string    `dynamodbav:"repository"`
+	Title          string    `dynamodbav:"title"`
+	Href           string    `dynamodbav:"href"`
+	Labels         []string  `dynamodbav:"labels"`
+	Draft          bool      `dynamodbav:"draft"`
+	ReviewDecision string    `dynamodbav:"review_decision"`
 }
 
 func (pr PullRequest) ToString() string {
@@ -168,6 +170,7 @@ func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	}
 
 	pr := &PullRequest{
+		UUID:       uuid.New().String(),
 		ID:         id,
 		Created:    datetime,
 		Creator:    username,

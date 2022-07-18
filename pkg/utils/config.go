@@ -6,10 +6,12 @@ import (
 )
 
 type Config struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	Org         string `json:"org"`
-	SaveCookies bool   `json:"saveCookies"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	AccessKeyID     string `json:"access_key_id"`
+	AccessKeySecret string `json:"access_key_secret"`
+	Org             string `json:"org"`
+	SaveCookies     bool   `json:"save_cookies"`
 }
 
 func GetConfig() (*Config, bool) {

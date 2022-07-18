@@ -1,6 +1,8 @@
 {
     "username": "",
     "password": "",
+    "access_key_id": "",
+    "access_key_secret": "",
     "org": "",
     "save_cookies": true
 }
