@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/ooojustin/pr-puller/pkg/database"
 	pr_gh "github.com/ooojustin/pr-puller/pkg/github"
 	"github.com/ooojustin/pr-puller/pkg/utils"
 )
@@ -13,6 +14,13 @@ func main() {
 	if !ok {
 		panic("failed to load config")
 	}
+
+	// Initialize database connection.
+	db, ok := database.Initialize()
+	if !ok {
+		panic("failed to initialize database client")
+	}
+	fmt.Println("database:", db)
 
 	// Initialize client used to access github
 	ghc, ok := pr_gh.NewGithubClient(
