@@ -17,30 +17,30 @@ import (
 )
 
 type PullRequest struct {
-	ID         int
-	Created    time.Time
-	Creator    string
-	Repository string
-	Title      string
-	Href       string
-	Labels     []string
-	Draft      bool
-	Status     string
+	ID             int
+	Created        time.Time
+	Creator        string
+	Repository     string
+	Title          string
+	Href           string
+	Labels         []string
+	Draft          bool
+	ReviewDecision string
 }
 
 func (pr PullRequest) ToString() string {
 	return fmt.Sprintf(
-		"%s %s %s %s %s %s %d",
+		"%s %s %s %s %s %d",
 		pr.Title,
 		pr.Href,
 		pr.Labels,
-		pr.Created,
 		pr.Creator,
-		pr.Status,
+		pr.ReviewDecision,
 		pr.ID,
 	)
 }
 
+// Generate all pull request objects for a given org.
 func (ghc *GithubClient) GetPullRequests(
 	org string,
 	open bool,
@@ -69,6 +69,7 @@ func (ghc *GithubClient) GetPullRequests(
 	}
 }
 
+// Generate pull request objects from a given page.
 func (ghc *GithubClient) loadPullRequests(
 	doc *goquery.Document,
 	page int,
@@ -77,6 +78,7 @@ func (ghc *GithubClient) loadPullRequests(
 	prs *[]*PullRequest,
 ) {
 	if doc == nil {
+		// Download page HTML and process it as a goquery Document for parsing.
 		var ok bool
 		doc, ok = ghc.loadPullRequestDocument(page, org, open)
 		if !ok {
@@ -84,6 +86,7 @@ func (ghc *GithubClient) loadPullRequests(
 		}
 	}
 
+	// Parse document and extract data from nodes to generate PR objects for this page.
 	var prsNew []*PullRequest
 	prNodes := getPullRequestNodes(doc)
 	for _, prNode := range prNodes {
@@ -92,11 +95,15 @@ func (ghc *GithubClient) loadPullRequests(
 		}
 	}
 
+	// Use Github's hidden 'pull_request_review_decisions' endpoint to attach
+	// review decisions to each of these PullRequest objects, if available.
 	ghc.loadPullRequestReviewDecisions(&prsNew)
 
+	// Add PRs from this page to the ongoing list.
 	*prs = append(*prs, prsNew...)
 }
 
+// Download Github pull requests page HTML and process it as a goquery Document for parsing.
 func (ghc *GithubClient) loadPullRequestDocument(page int, org string, open bool) (*goquery.Document, bool) {
 	items := []string{}
 	items = append(items, "org:"+org)
@@ -128,6 +135,7 @@ func (ghc *GithubClient) loadPullRequestDocument(page int, org string, open bool
 	return doc, true
 }
 
+// Generate a PullRequest object to represent a pull request given the primary node.
 func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	iconBoxNode := prNode.FirstChild.NextSibling.FirstChild.NextSibling
 	iconNode := iconBoxNode.FirstChild.NextSibling
@@ -173,6 +181,8 @@ func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	return pr, true
 }
 
+// Get the 'opened by' node, used as a starting point to find the created timestamp
+// of the pull request and the username of the person who created it.
 func getPullRequestOpenedNode(aTagPR *html.Node) *html.Node {
 	for c := aTagPR.NextSibling; c != nil; c = c.NextSibling {
 		class, _ := utils.GetAttribute(c, "class")
@@ -184,6 +194,7 @@ func getPullRequestOpenedNode(aTagPR *html.Node) *html.Node {
 	return nil
 }
 
+// Get the labels that have been attached to a pull request.
 func getPullRequestLabels(aTagPR *html.Node) []string {
 	var labels []string
 	for c := aTagPR.NextSibling; c != nil; c = c.NextSibling {
@@ -202,6 +213,7 @@ func getPullRequestLabels(aTagPR *html.Node) []string {
 	return labels
 }
 
+// Get a list of the nodes that each represent a pull request.
 func getPullRequestNodes(doc *goquery.Document) []*html.Node {
 	var nodes []*html.Node
 	selection := doc.Find("div.js-navigation-container")
@@ -213,6 +225,7 @@ func getPullRequestNodes(doc *goquery.Document) []*html.Node {
 	return nodes
 }
 
+// Parse pagination nodes to determine total number of pages.
 func getPageCount(doc *goquery.Document) (int, bool) {
 	selection := doc.Find("div.pagination")
 	pagination := selection.Nodes[0]
@@ -229,9 +242,9 @@ func getPageCount(doc *goquery.Document) (int, bool) {
 	return count, true
 }
 
-// Loads current pull request review decision status for a list of PRs.
-// This will POST multipart/form-data to a hidden endpoint, allowing us to efficiently
-// determine the review status for multiple PRs at the same time.
+// Loads pull request review decision for a list of PRs.
+// This will POST multipart/form-data to a hidden endpoint, allowing us to
+// efficiently determine the review decision for multiple PRs at the same time.
 // Sample request body: https://pastebin.com/xvieweYs
 func (ghc *GithubClient) loadPullRequestReviewDecisions(prs *[]*PullRequest) {
 	var buffer bytes.Buffer
@@ -290,7 +303,7 @@ func (ghc *GithubClient) loadPullRequestReviewDecisions(prs *[]*PullRequest) {
 			continue
 		}
 
-		// Access the PullRequest instance that we're updating status of.
+		// Access the PullRequest instance that we're updating review decision of.
 		pr := (*prs)[idx]
 
 		// Parse the HTML string from value we got in return.
@@ -301,11 +314,11 @@ func (ghc *GithubClient) loadPullRequestReviewDecisions(prs *[]*PullRequest) {
 			continue
 		}
 
-		// Extract status text from HTML.
+		// Extract review decision text from HTML.
 		span := node.FirstChild.FirstChild.NextSibling.FirstChild // html->head->body->span
 		a := span.FirstChild.NextSibling                          // span->text->a
 
-		// Update status in original PullRequest object.
-		pr.Status = strings.TrimSpace(a.FirstChild.Data)
+		// Update review decision in original PullRequest object.
+		pr.ReviewDecision = strings.TrimSpace(a.FirstChild.Data)
 	}
 }
