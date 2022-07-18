@@ -84,12 +84,17 @@ func (ghc *GithubClient) loadPullRequests(
 		}
 	}
 
+	var prsNew []*PullRequest
 	prNodes := getPullRequestNodes(doc)
 	for _, prNode := range prNodes {
 		if pr, ok := generatePullRequestObject(prNode); ok {
-			*prs = append(*prs, pr)
+			prsNew = append(prsNew, pr)
 		}
 	}
+
+	ghc.loadPullRequestReviewDecisions(&prsNew)
+
+	*prs = append(*prs, prsNew...)
 }
 
 func (ghc *GithubClient) loadPullRequestDocument(page int, org string, open bool) (*goquery.Document, bool) {
@@ -224,6 +229,83 @@ func getPageCount(doc *goquery.Document) (int, bool) {
 	return count, true
 }
 
+// Loads current pull request review decision status for a list of PRs.
+// This will POST multipart/form-data to a hidden endpoint, allowing us to efficiently
+// determine the review status for multiple PRs at the same time.
+// Sample request body: https://pastebin.com/xvieweYs
+func (ghc *GithubClient) loadPullRequestReviewDecisions(prs *[]*PullRequest) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+
+	// Default field added to each of these requests.
+	utils.AddFormField(writer, "_method", "GET")
+
+	// Add form field with each one of these IDs to request review decision.
+	for idx, pr := range *prs {
+		name := fmt.Sprintf("items[item-%d][pull_request_id]", idx)
+		idStr := strconv.Itoa(pr.ID)
+		utils.AddFormField(writer, name, idStr)
+	}
+
+	// Close multipart writer since all fields have been written.
+	writer.Close()
+
+	// Prepare request with buffer containing form data.
+	url := GITHUB_URL + "pull_request_review_decisions"
+	req, err := http.NewRequest("POST", url, &buffer)
+	if err != nil {
+		fmt.Println("failed to create request:", err)
+		return
+	}
+
+	// Set important headers and execute request.
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Accept", "application/json")
+	resp, err := ghc.client.Do(req)
+	if err != nil {
+		fmt.Println("failed to execute request:", err)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	// Decode json response body into a map.
+	// Sample response: https://pastebin.com/5WGaG0yz
+	var data map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		fmt.Println("failed to decode response:", err)
+		return
+	}
+
+	for key, value := range data {
+		if len(value.(string)) == 0 {
+			continue
 		}
+
+		// Determine index of the PR that this key corresponds with.
+		idx, err := strconv.Atoi(strings.Split(key, "-")[1])
+		if err != nil {
+			fmt.Println("failed to determine index from key:", key)
+			continue
+		}
+
+		// Access the PullRequest instance that we're updating status of.
+		pr := (*prs)[idx]
+
+		// Parse the HTML string from value we got in return.
+		// Sample of this node: https://pastebin.com/55gQ1VbU
+		node, err := html.Parse(strings.NewReader(value.(string)))
+		if err != nil {
+			fmt.Println("failed to parse item:", key)
+			continue
+		}
+
+		// Extract status text from HTML.
+		span := node.FirstChild.FirstChild.NextSibling.FirstChild // html->head->body->span
+		a := span.FirstChild.NextSibling                          // span->text->a
+
+		// Update status in original PullRequest object.
+		pr.Status = strings.TrimSpace(a.FirstChild.Data)
 	}
 }
