@@ -17,6 +17,25 @@ var (
 	ItemNotFoundError error = errors.New("Item not found.")
 )
 
+// Returns: uploaded, skipped, failed
+func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) (int, int, int) {
+	var uploaded, skipped, failed int
+	for _, pr := range prs {
+		exists, err := db.GetPullRequestExists(pr.PK)
+		if exists || err != nil {
+			skipped++
+			continue
+		}
+
+		if db.PutPullRequest(pr) {
+			uploaded++
+		} else {
+			failed++
+		}
+	}
+	return uploaded, skipped, failed
+}
+
 func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
 	av, err := dynamodbattribute.MarshalMap(pr)
 	if err != nil {

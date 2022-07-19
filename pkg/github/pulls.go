@@ -40,7 +40,7 @@ func (pr PullRequest) ToString() (string, error) {
 }
 
 // Generate all pull request objects for a given org.
-func (ghc *GithubClient) GetPullRequests(
+func (ghc *GithubClient) GetAllPullRequests(
 	org string,
 	open bool,
 	prs *[]*PullRequest,
@@ -58,18 +58,18 @@ func (ghc *GithubClient) GetPullRequests(
 	}
 
 	// Extract pull request data from each page
-	for i := 1; i <= maxPage; i++ {
+	for page := 1; page <= maxPage; page++ {
 		var document *goquery.Document
-		if i == 1 {
+		if page == 1 {
 			document = doc
 		}
 
-		ghc.loadPullRequests(document, i, org, open, prs)
+		ghc.GetPullRequests(document, page, org, open, prs)
 	}
 }
 
 // Generate pull request objects from a given page.
-func (ghc *GithubClient) loadPullRequests(
+func (ghc *GithubClient) GetPullRequests(
 	doc *goquery.Document,
 	page int,
 	org string,
