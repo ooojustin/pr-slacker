@@ -42,6 +42,8 @@ func main() {
 
 	fmt.Println("LOADED PRS:", len(pullRequests))
 	for _, pr := range pullRequests {
-		fmt.Println(pr.ToString())
+		if prStr, err := pr.ToString(); err == nil {
+			fmt.Println(prStr)
+		}
 	}
 }

@@ -1,6 +1,8 @@
 package database
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -10,6 +12,7 @@ import (
 func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
 	av, err := dynamodbattribute.MarshalMap(pr)
 	if err != nil {
+		fmt.Println("Failed to marshal PullRequest:", err)
 		return false
 	}
 
@@ -20,6 +23,7 @@ func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
 
 	_, err = db.DynamoDB.PutItem(input)
 	if err != nil {
+		fmt.Println("Failed to PutItem PullRequest:", err)
 		return false
 	}
 

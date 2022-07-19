@@ -12,34 +12,31 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/google/uuid"
 	"github.com/ooojustin/pr-puller/pkg/utils"
 	"golang.org/x/net/html"
 )
 
 type PullRequest struct {
-	UUID           string    `dynamodbav:"uuid"`
-	ID             int       `dynamodbav:"id"`
-	Created        time.Time `dynamodbav:"created"`
-	Creator        string    `dynamodbav:"creator"`
-	Repository     string    `dynamodbav:"repository"`
-	Title          string    `dynamodbav:"title"`
-	Href           string    `dynamodbav:"href"`
-	Labels         []string  `dynamodbav:"labels"`
-	Draft          bool      `dynamodbav:"draft"`
-	ReviewDecision string    `dynamodbav:"review_decision"`
+	PK             string    `json:"-" dynamodbav:"pr_uid"`
+	ID             int       `json:"id" dynamodbav:"id"`
+	Created        time.Time `json:"created" dynamodbav:"created"`
+	Creator        string    `json:"creator" dynamodbav:"creator"`
+	Repository     string    `json:"repository" dynamodbav:"repository"`
+	Organization   string    `json:"organization" dynamodbav:"organization"`
+	Title          string    `json:"title" dynamodbav:"title"`
+	URL            string    `json:"url" dynamodbav:"url"`
+	Labels         []string  `json:"labels" dynamodbav:"labels"`
+	Draft          bool      `json:"draft" dynamodbav:"draft"`
+	ReviewDecision string    `json:"review_decision" dynamodbav:"review_decision"`
+	Number         int       `json:"number" dynamodbav:"number"`
 }
 
-func (pr PullRequest) ToString() string {
-	return fmt.Sprintf(
-		"%s %s %s %s %s %d",
-		pr.Title,
-		pr.Href,
-		pr.Labels,
-		pr.Creator,
-		pr.ReviewDecision,
-		pr.ID,
-	)
+func (pr PullRequest) ToString() (string, error) {
+	prBytes, err := json.MarshalIndent(pr, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return string(prBytes), nil
 }
 
 // Generate all pull request objects for a given org.
@@ -150,16 +147,23 @@ func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 
 	draft := strings.Contains(lbl, "draft")
 	aTagRepo := iconBoxNode.NextSibling.NextSibling.NextSibling.NextSibling.FirstChild.NextSibling
-	repoName := strings.TrimSpace(aTagRepo.FirstChild.Data)
+	repositoryPath := strings.TrimSpace(aTagRepo.FirstChild.Data)
+	repositoryPathSplit := strings.Split(repositoryPath, "/")
+	organization := repositoryPathSplit[0]
+	repositoryName := repositoryPathSplit[1]
 	aTagPR := aTagRepo.NextSibling.NextSibling
 	prName := strings.TrimSpace(aTagPR.FirstChild.Data)
 	href, _ := utils.GetAttribute(aTagPR, "href")
+	hrefSplit := strings.Split(href, "/")
+	number, _ := strconv.Atoi(hrefSplit[len(hrefSplit)-1])
 	labels := getPullRequestLabels(aTagPR)
 	opened := getPullRequestOpenedNode(aTagPR)
 	datetimeNode := opened.FirstChild.NextSibling
 	datetimeStr, _ := utils.GetAttribute(datetimeNode, "datetime")
 	username := strings.TrimSpace(datetimeNode.NextSibling.NextSibling.FirstChild.Data)
 	datetime, _ := time.Parse(time.RFC3339, datetimeStr)
+	pk := fmt.Sprintf("%s#%s#%d", organization, repositoryName, number)
+	url := GITHUB_URL + href
 
 	var id int
 	if !draft {
@@ -170,15 +174,17 @@ func generatePullRequestObject(prNode *html.Node) (*PullRequest, bool) {
 	}
 
 	pr := &PullRequest{
-		UUID:       uuid.New().String(),
-		ID:         id,
-		Created:    datetime,
-		Creator:    username,
-		Repository: repoName,
-		Title:      prName,
-		Href:       href,
-		Labels:     labels,
-		Draft:      draft,
+		PK:           pk,
+		ID:           id,
+		Created:      datetime,
+		Creator:      username,
+		Repository:   repositoryName,
+		Organization: organization,
+		Title:        prName,
+		URL:          url,
+		Labels:       labels,
+		Draft:        draft,
+		Number:       number,
 	}
 
 	return pr, true
