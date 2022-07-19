@@ -11,6 +11,7 @@ import (
 )
 
 const pullRequestsTable string = "pull-requests"
+const pullRequestPK string = "pr_uid"
 
 var (
 	ItemNotFoundError error = errors.New("Item not found.")
@@ -38,7 +39,7 @@ func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
 }
 
 func (db *Database) GetPullRequest(pr_uid string) (*pr_gh.PullRequest, error) {
-	key := map[string]interface{}{"pr_uid": pr_uid}
+	key := map[string]interface{}{pullRequestPK: pr_uid}
 
 	av, err := dynamodbattribute.MarshalMap(key)
 	if err != nil {
@@ -70,4 +71,26 @@ func (db *Database) GetPullRequest(pr_uid string) (*pr_gh.PullRequest, error) {
 	}
 
 	return &pr, nil
+}
+
+func (db *Database) GetPullRequestExists(pr_uid string) (bool, error) {
+	key := map[string]interface{}{pullRequestPK: pr_uid}
+
+	av, err := dynamodbattribute.MarshalMap(key)
+	if err != nil {
+		return false, err
+	}
+
+	input := &dynamodb.GetItemInput{
+		Key:                  av,
+		TableName:            aws.String(pullRequestsTable),
+		ProjectionExpression: aws.String(pullRequestPK),
+	}
+
+	output, err := db.DynamoDB.GetItem(input)
+	if err != nil {
+		return false, err
+	}
+
+	return len(output.Item) > 0, nil
 }
