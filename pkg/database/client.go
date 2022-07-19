@@ -8,7 +8,6 @@ import (
 	"github.com/ooojustin/pr-puller/pkg/utils"
 )
 
-const prTable string = "pull-requests"
 const region string = "us-east-1"
 
 type Database struct {
