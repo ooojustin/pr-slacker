@@ -6,12 +6,14 @@ import (
 )
 
 type Config struct {
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	AccessKeyID     string `json:"access_key_id"`
-	AccessKeySecret string `json:"access_key_secret"`
-	Org             string `json:"org"`
-	SaveCookies     bool   `json:"save_cookies"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	AwsAccessKeyID     string `json:"aws_access_key_id"`
+	AwsAccessKeySecret string `json:"aws_access_key_secret"`
+	SlackOauthToken    string `json:"slack_oauth_token"`
+	SlackChannelID     string `json:"slack_channel_id"`
+	Org                string `json:"org"`
+	SaveCookies        bool   `json:"save_cookies"`
 }
 
 func GetConfig() (*Config, bool) {

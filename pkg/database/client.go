@@ -20,7 +20,7 @@ func Initialize() (*Database, bool) {
 		return nil, false
 	}
 
-	creds := credentials.NewStaticCredentials(cfg.AccessKeyID, cfg.AccessKeySecret, "")
+	creds := credentials.NewStaticCredentials(cfg.AwsAccessKeyID, cfg.AwsAccessKeySecret, "")
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: creds,
 		Region:      aws.String(region),

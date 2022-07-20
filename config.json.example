@@ -1,8 +1,10 @@
 {
     "username": "",
     "password": "",
-    "access_key_id": "",
-    "access_key_secret": "",
+    "aws_access_key_id": "",
+    "aws_access_key_secret": "",
+    "slack_oauth_token": "",
+    "slack_channel_id": "",
     "org": "",
     "save_cookies": true
 }
