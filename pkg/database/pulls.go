@@ -17,23 +17,44 @@ var (
 	ItemNotFoundError error = errors.New("Item not found.")
 )
 
+type PutPullRequestCounts struct {
+	Uploaded int
+	Updated  int
+	Skipped  int
+	Failed   int
+}
+
 // Returns: uploaded, skipped, failed
-func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) (int, int, int) {
-	var uploaded, skipped, failed int
+func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestCounts {
+	var counts PutPullRequestCounts
 	for _, pr := range prs {
-		exists, err := db.GetPullRequestExists(pr.PK)
-		if exists || err != nil {
-			skipped++
+		existingPR, err := db.GetPullRequest(pr.PK)
+		if err != nil && err != ItemNotFoundError {
+			counts.Skipped++
 			continue
 		}
 
+		var update bool
+		if existingPR != nil {
+			update = (existingPR.Draft && !pr.Draft) ||
+				(existingPR.ReviewDecision != pr.ReviewDecision)
+			if !update {
+				counts.Skipped++
+				continue
+			}
+		}
+
 		if db.PutPullRequest(pr) {
-			uploaded++
+			if update {
+				counts.Updated++
+			} else {
+				counts.Uploaded++
+			}
 		} else {
-			failed++
+			counts.Failed++
 		}
 	}
-	return uploaded, skipped, failed
+	return counts
 }
 
 func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
@@ -90,26 +111,4 @@ func (db *Database) GetPullRequest(pr_uid string) (*pr_gh.PullRequest, error) {
 	}
 
 	return &pr, nil
-}
-
-func (db *Database) GetPullRequestExists(pr_uid string) (bool, error) {
-	key := map[string]interface{}{pullRequestPK: pr_uid}
-
-	av, err := dynamodbattribute.MarshalMap(key)
-	if err != nil {
-		return false, err
-	}
-
-	input := &dynamodb.GetItemInput{
-		Key:                  av,
-		TableName:            aws.String(pullRequestsTable),
-		ProjectionExpression: aws.String(pullRequestPK),
-	}
-
-	output, err := db.DynamoDB.GetItem(input)
-	if err != nil {
-		return false, err
-	}
-
-	return len(output.Item) > 0, nil
 }
