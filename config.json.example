@@ -1,10 +1,10 @@
 {
-    "username": "",
-    "password": "",
+    "github_username": "",
+    "github_password": "",
+    "github_organization": "",
+    "github_save_cookies": true,
     "aws_access_key_id": "",
     "aws_access_key_secret": "",
     "slack_oauth_token": "",
-    "slack_channel_id": "",
-    "org": "",
-    "save_cookies": true
+    "slack_channel_id": ""
 }

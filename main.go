@@ -42,9 +42,9 @@ func main() {
 
 	// Initialize client used to access github.
 	ghc, ok := pr_gh.NewGithubClient(
-		cfg.Username,
-		cfg.Password,
-		cfg.SaveCookies,
+		cfg.GithubUsername,
+		cfg.GithubPassword,
+		cfg.GithubSaveCookies,
 	)
 	if !ok {
 		panic("failed to initialize github client")
@@ -74,10 +74,10 @@ func (dw *DependencyWrapper) processPullRequests(all bool) {
 	var pullRequests []*pr_gh.PullRequest
 	if all {
 		// Process all pages of pull requests
-		dw.ghc.GetAllPullRequests(dw.cfg.Org, true, &pullRequests)
+		dw.ghc.GetAllPullRequests(dw.cfg.GithubOrganization, true, &pullRequests)
 	} else {
 		// Process first page of pull requests (25 most recent)
-		dw.ghc.GetPullRequests(nil, 1, dw.cfg.Org, true, &pullRequests)
+		dw.ghc.GetPullRequests(nil, 1, dw.cfg.GithubOrganization, true, &pullRequests)
 	}
 	fmt.Printf("Loaded %d PullRequests\n", len(pullRequests))
 	pprr := dw.db.PutPullRequests(pullRequests)
