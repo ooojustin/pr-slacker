@@ -29,6 +29,7 @@ type PullRequest struct {
 	Draft          bool      `json:"draft" dynamodbav:"draft"`
 	ReviewDecision string    `json:"review_decision" dynamodbav:"review_decision"`
 	Number         int       `json:"number" dynamodbav:"number"`
+	Notified       bool      `json:"notified" dynamodbav:"notified"`
 }
 
 func (pr PullRequest) ToString() (string, error) {

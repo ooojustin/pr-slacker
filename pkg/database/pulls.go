@@ -17,44 +17,55 @@ var (
 	ItemNotFoundError error = errors.New("Item not found.")
 )
 
-type PutPullRequestCounts struct {
+type PutPullRequestsResponse struct {
 	Uploaded int
 	Updated  int
 	Skipped  int
 	Failed   int
+	Notify   []*pr_gh.PullRequest
 }
 
 // Returns: uploaded, skipped, failed
-func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestCounts {
-	var counts PutPullRequestCounts
+func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsResponse {
+	var response PutPullRequestsResponse
 	for _, pr := range prs {
 		existingPR, err := db.GetPullRequest(pr.PK)
 		if err != nil && err != ItemNotFoundError {
-			counts.Skipped++
+			response.Skipped++
 			continue
 		}
 
 		var update bool
 		if existingPR != nil {
 			update = (existingPR.Draft && !pr.Draft) ||
-				(existingPR.ReviewDecision != pr.ReviewDecision)
+				((existingPR.ReviewDecision != pr.ReviewDecision) && pr.ReviewDecision == "Review required")
 			if !update {
-				counts.Skipped++
+				response.Skipped++
 				continue
 			}
 		}
 
+		var notify bool
+		if !pr.Notified && !pr.Draft && pr.ReviewDecision != "Approved" {
+			notify = true
+			pr.Notified = true
+		}
+
 		if db.PutPullRequest(pr) {
 			if update {
-				counts.Updated++
+				response.Updated++
 			} else {
-				counts.Uploaded++
+				response.Uploaded++
+			}
+
+			if notify {
+				response.Notify = append(response.Notify, pr)
 			}
 		} else {
-			counts.Failed++
+			response.Failed++
 		}
 	}
-	return counts
+	return response
 }
 
 func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
