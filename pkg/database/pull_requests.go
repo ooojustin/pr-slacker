@@ -18,10 +18,10 @@ var (
 )
 
 type PutPullRequestsResponse struct {
-	Uploaded int
-	Updated  int
-	Skipped  int
-	Failed   int
+	Uploaded []*pr_gh.PullRequest
+	Updated  []*pr_gh.PullRequest
+	Skipped  []*pr_gh.PullRequest
+	Failed   []*pr_gh.PullRequest
 	Notify   []*pr_gh.PullRequest
 }
 
@@ -31,7 +31,7 @@ func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsRes
 	for _, pr := range prs {
 		existingPR, err := db.GetPullRequest(pr.PK)
 		if err != nil && err != ItemNotFoundError {
-			response.Skipped++
+			response.Skipped = append(response.Skipped, pr)
 			continue
 		}
 
@@ -40,7 +40,7 @@ func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsRes
 			update = (existingPR.Draft && !pr.Draft) ||
 				((existingPR.ReviewDecision != pr.ReviewDecision) && pr.ReviewDecision == "Review required")
 			if !update {
-				response.Skipped++
+				response.Skipped = append(response.Skipped, pr)
 				continue
 			}
 		}
@@ -53,16 +53,16 @@ func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsRes
 
 		if db.PutPullRequest(pr) {
 			if update {
-				response.Updated++
+				response.Updated = append(response.Updated, pr)
 			} else {
-				response.Uploaded++
+				response.Uploaded = append(response.Uploaded, pr)
 			}
 
 			if notify {
 				response.Notify = append(response.Notify, pr)
 			}
 		} else {
-			response.Failed++
+			response.Failed = append(response.Failed, pr)
 		}
 	}
 	return response

@@ -23,7 +23,7 @@ func NewGithubClient(username string, password string, saveCookies bool) (*Githu
 		opts.NoPersist = true
 	}
 
-	jar, err := cookiejar.New(nil)
+	jar, err := cookiejar.New(opts)
 	if err != nil {
 		return nil, false
 	}
