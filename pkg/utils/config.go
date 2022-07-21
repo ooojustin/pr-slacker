@@ -12,6 +12,7 @@ type Config struct {
 	GithubSaveCookies  bool   `json:"github_save_cookies"`
 	AwsAccessKeyID     string `json:"aws_access_key_id"`
 	AwsAccessKeySecret string `json:"aws_access_key_secret"`
+	AwsRegion          string `json:"aws_region"`
 	SlackOauthToken    string `json:"slack_oauth_token"`
 	SlackChannelID     string `json:"slack_channel_id"`
 }

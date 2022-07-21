@@ -8,8 +8,6 @@ import (
 	"github.com/ooojustin/pr-puller/pkg/utils"
 )
 
-const region string = "us-east-1"
-
 type Database struct {
 	DynamoDB *dynamodb.DynamoDB
 }
@@ -23,7 +21,7 @@ func Initialize() (*Database, bool) {
 	creds := credentials.NewStaticCredentials(cfg.AwsAccessKeyID, cfg.AwsAccessKeySecret, "")
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: creds,
-		Region:      aws.String(region),
+		Region:      aws.String(cfg.AwsRegion),
 	})
 	if err != nil {
 		return nil, false

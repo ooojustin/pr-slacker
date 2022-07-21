@@ -5,6 +5,7 @@
     "github_save_cookies": true,
     "aws_access_key_id": "",
     "aws_access_key_secret": "",
+    "aws_region": "",
     "slack_oauth_token": "",
     "slack_channel_id": ""
 }
