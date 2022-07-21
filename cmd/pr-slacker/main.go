@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ooojustin/pr-puller/pkg/database"
 	pr_gh "github.com/ooojustin/pr-puller/pkg/github"
@@ -10,24 +11,22 @@ import (
 )
 
 func main() {
-
 	// Load config variables from file.
 	cfg, ok := utils.GetConfig()
 	if !ok {
-		panic("Failed to load config.")
+		exit("Failed to load config.", 0)
 	}
 
 	// Initialize database connection.
 	db, ok := database.Initialize()
 	if !ok {
-		panic("Failed to initialize database client.")
+		exit("Failed to initialize database client.", 0)
 	}
-	fmt.Println("database:", db)
 
 	// Initialize slack client used to send messages.
 	slackClient, ok := slack.Initialize()
 	if !ok {
-		panic("Failed to initialize slack client.")
+		exit("Failed to initialize slack client.", 0)
 	}
 
 	// Initialize client used to access github.
@@ -37,14 +36,12 @@ func main() {
 		cfg.GithubSaveCookies,
 	)
 	if !ok {
-		panic("Failed to initialize github client.")
+		exit("Failed to initialize github client.", 0)
 	}
 
 	// Login to github via the client
-	var login bool = ghc.Login()
-	fmt.Println("Login: ", login, "\n", LineSeperator)
-	if !login {
-		panic("Failed to login.")
+	if login := ghc.Login(); !login {
+		exit("Failed to login.", 0)
 	}
 
 	prs := &PrSlacker{
@@ -54,4 +51,9 @@ func main() {
 		slack: slackClient,
 	}
 	prs.Run()
+}
+
+func exit(msg string, code int) {
+	fmt.Println(msg)
+	os.Exit(code)
 }
