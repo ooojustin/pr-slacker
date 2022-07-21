@@ -39,7 +39,7 @@ func (prs *PrSlacker) processPullRequests(all bool) {
 		prs.ghc.GetAllPullRequests(org, true, &pullRequests)
 	} else {
 		// Process first page of pull requests (25 most recent)
-		fmt.Printf("Refreshing: %s\n", timeStr)
+		fmt.Printf("\nRefreshing: %s\n", timeStr)
 		prs.ghc.GetPullRequests(nil, 1, org, true, &pullRequests)
 	}
 

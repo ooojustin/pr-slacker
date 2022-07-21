@@ -25,7 +25,6 @@ type PutPullRequestsResponse struct {
 	Notify   []*pr_gh.PullRequest
 }
 
-// Returns: uploaded, skipped, failed
 func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsResponse {
 	var response PutPullRequestsResponse
 	for _, pr := range prs {
@@ -51,7 +50,7 @@ func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsRes
 			pr.Notified = true
 		}
 
-		if db.PutPullRequest(pr) {
+		if err := db.PutPullRequest(pr); err == nil {
 			if update {
 				response.Updated = append(response.Updated, pr)
 			} else {
@@ -68,11 +67,11 @@ func (db *Database) PutPullRequests(prs []*pr_gh.PullRequest) PutPullRequestsRes
 	return response
 }
 
-func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
+func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) error {
 	av, err := dynamodbattribute.MarshalMap(pr)
 	if err != nil {
 		fmt.Println("Failed to marshal PullRequest:", err)
-		return false
+		return err
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -83,10 +82,10 @@ func (db *Database) PutPullRequest(pr *pr_gh.PullRequest) bool {
 	_, err = db.DynamoDB.PutItem(input)
 	if err != nil {
 		fmt.Println("Failed to PutItem PullRequest:", err)
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
 func (db *Database) GetPullRequest(pr_uid string) (*pr_gh.PullRequest, error) {
