@@ -44,12 +44,12 @@ func (ghc *GithubClient) Login() bool {
 	if len(fss) != 2 {
 		return false
 	}
-	rf := fss[1]
+	required_field := fss[1]
 
 	fmt.Println("authenticity_token:", authenticity_token)
 	fmt.Println("timestamp_secret:", timestamp_secret)
 	fmt.Println("timestamp:", timestamp)
-	fmt.Println("required_field:", rf)
+	fmt.Println("required_field:", required_field)
 
 	data := url.Values{}
 	data.Add("login", ghc.username)
@@ -65,7 +65,7 @@ func (ghc *GithubClient) Login() bool {
 	data.Add("allow_signup", "")
 	data.Add("client_id", "")
 	data.Add("integration", "")
-	data.Add(rf, "")
+	data.Add(required_field, "")
 
 	resp, err = ghc.client.PostForm(GITHUB_URL+"session", data)
 	if err != nil {
@@ -80,38 +80,47 @@ func (ghc *GithubClient) Login() bool {
 
 	locationUrlObj, _ := resp.Location()
 	locationUrlStr := locationUrlObj.String()
+
 	_2fa := strings.HasSuffix(locationUrlStr, "two-factor")
-	if _2fa {
-		for {
-			resp2fa, _ := ghc.client.Get(locationUrlStr)
-			body2fa, _ := utils.GetResponseBody(resp2fa)
-			authenticity_token, ok = utils.FindHiddenValue("authenticity_token", body2fa)
-
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("2FA Code: ")
-			otp, _ := reader.ReadString('\n')
-
-			data2fa := url.Values{}
-			data2fa.Add("authenticity_token", authenticity_token)
-			data2fa.Add("otp", otp)
-
-			resp, err := ghc.client.PostForm(locationUrlStr, data2fa)
-			if err != nil {
-				fmt.Println("2fa failed")
-				return false
-			}
-
-			if resp.StatusCode == 200 {
-				// We are on the same page, aka it failed
-				fmt.Println("you entered the wrong 2fa code")
-			} else if resp.StatusCode == 302 {
-				// It tried to redirect us, aka login succeeded
-				fmt.Println("success! you are now logged in")
-				break
-			}
-		}
+	if _2fa && !ghc.handle2FA(locationUrlStr) {
+		return false
 	}
 
 	ghc.client.Jar.(*cookiejar.Jar).Save()
+	return true
+}
+
+func (ghc *GithubClient) handle2FA(locationUrl string) bool {
+	for {
+		resp2fa, _ := ghc.client.Get(locationUrl)
+		body2fa, _ := utils.GetResponseBody(resp2fa)
+		authenticity_token, ok := utils.FindHiddenValue("authenticity_token", body2fa)
+		if !ok {
+			return false
+		}
+
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("2FA Code: ")
+		otp, _ := reader.ReadString('\n')
+
+		data2fa := url.Values{}
+		data2fa.Add("authenticity_token", authenticity_token)
+		data2fa.Add("otp", otp)
+
+		resp, err := ghc.client.PostForm(locationUrl, data2fa)
+		if err != nil {
+			fmt.Println("2fa failed")
+			return false
+		}
+
+		if resp.StatusCode == 200 {
+			// We are on the same page, aka it failed
+			fmt.Println("you entered the wrong 2fa code")
+		} else if resp.StatusCode == 302 {
+			// It tried to redirect us, aka login succeeded
+			fmt.Println("success! you are now logged in")
+			break
+		}
+	}
 	return true
 }

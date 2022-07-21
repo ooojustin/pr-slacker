@@ -44,14 +44,23 @@ func (slack *Slack) SendMessage(
 	return err
 }
 
+func (slack *Slack) SendPullRequestMessage(pr *pr_gh.PullRequest) error {
+	attachment := &slack_go.Attachment{
+		Title:      pr.Title,
+		TitleLink:  pr.URL,
+		AuthorName: pr.Creator,
+	}
+
+	err := slack.SendMessage(
+		"A pull request is ready to be reviewed.",
+		attachment,
+	)
+
+	return err
+}
+
 func (slack *Slack) SendPullRequestMessages(prs []*pr_gh.PullRequest) {
 	for _, pr := range prs {
-		attachment := &slack_go.Attachment{
-			Title:      pr.Title,
-			TitleLink:  pr.URL,
-			AuthorName: pr.Creator,
-		}
-
-		slack.SendMessage("A pull request is ready to be reviewed.", attachment)
+		slack.SendPullRequestMessage(pr)
 	}
 }
