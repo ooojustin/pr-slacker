@@ -34,6 +34,7 @@ func main() {
 		cfg.GithubUsername,
 		cfg.GithubPassword,
 		cfg.GithubSaveCookies,
+		cfg.GithubManualLogin,
 	)
 	if !ok {
 		exit("Failed to initialize github client.", 0)

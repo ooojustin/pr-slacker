@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
+	GithubOrganization string `json:"github_organization"`
+	GithubManualLogin  bool   `json:"github_manual_login"`
 	GithubUsername     string `json:"github_username"`
 	GithubPassword     string `json:"github_password"`
-	GithubOrganization string `json:"github_organization"`
 	GithubSaveCookies  bool   `json:"github_save_cookies"`
 	AwsAccessKeyID     string `json:"aws_access_key_id"`
 	AwsAccessKeySecret string `json:"aws_access_key_secret"`

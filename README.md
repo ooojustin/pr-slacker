@@ -25,14 +25,15 @@ Before running the program, rename this file to `config.json` and open it in a t
 
 Fill in the file with your settings and save the file. After doing so, you can run the program successfully.
 
-| Variable Name         | Type          | Description                                                                                                                                            |
-| -------------         | ------------- | -------------                                                                                                                                          |
-| github_username       | `string`      | Username of the Github account used to login and monitor data.                                                                                         |
-| github_password       | `string`      | Password of the Github account used to login and monitor data.                                                                                         |
-| github_organization   | `string`      | The Github account of the organization that you're monitoring pull requests from.                                                                      |
-| github_save_cookies   | `bool`        | Whether or not your Github account session should be saved/restored in a local file automatically.                                                     |
-| aws_access_key_id     | `string`      | AWS Access key used to authenticate your DynamoDB connection.                                                                                          |
-| aws_access_key_secret | `string`      | AWS Secret key used to authenticate your DynamoDB connection.                                                                                          |
-| aws_region            | `string`      | The [AWS region code](https://docs.aws.amazon.com/general/latest/gr/ddb.html#ddb_region) which is the host of your DynamoD database. (ex: `us-east-1`) |
-| slack_oauth_token     | `string`      | OAuth token of your Slack application.                                                                                                                 |
-| slack_channel_id      | `string`      | The ID of the Slack channel to post pull request notifications in.                                                                                     |
+| Variable Name            | Type          | Description                                                                                                                                            |
+| -------------            | ------------- | -------------                                                                                                                                          |
+| github_enter_credentials | `bool`        | Manually enter Github credentials instead of using those from config.
+| github_username          | `string`      | Username of the Github account used to login and monitor data.                                                                                         |
+| github_password          | `string`      | Password of the Github account used to login and monitor data.                                                                                         |
+| github_organization      | `string`      | The Github account of the organization that you're monitoring pull requests from.                                                                      |
+| github_save_cookies      | `bool`        | Whether or not your Github account session should be saved/restored in a local file automatically.                                                     |
+| aws_access_key_id        | `string`      | AWS Access key used to authenticate your DynamoDB connection.                                                                                          |
+| aws_access_key_secret    | `string`      | AWS Secret key used to authenticate your DynamoDB connection.                                                                                          |
+| aws_region               | `string`      | The [AWS region code](https://docs.aws.amazon.com/general/latest/gr/ddb.html#ddb_region) which is the host of your DynamoD database. (ex: `us-east-1`) |
+| slack_oauth_token        | `string`      | OAuth token of your Slack application.                                                                                                                 |
+| slack_channel_id         | `string`      | The ID of the Slack channel to post pull request notifications in.                                                                                     |

@@ -5,11 +5,9 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"syscall"
 
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/ooojustin/pr-puller/pkg/utils"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 func (ghc *GithubClient) Login() bool {
@@ -100,19 +98,15 @@ func (ghc *GithubClient) handle2FA(locationUrl string) bool {
 			return false
 		}
 
-		fmt.Print("2FA Code: ")
-		var stdin int = int(syscall.Stdin)
-		otpBytes, err := terminal.ReadPassword(stdin)
-		if err == nil {
-			fmt.Println()
-		} else {
+		otp, err := utils.ReadPassword("2FA Code")
+		if err != nil {
 			fmt.Println("Failed to read 2FA code input.")
 			return false
 		}
 
 		data2fa := url.Values{}
 		data2fa.Add("authenticity_token", authenticity_token)
-		data2fa.Add("otp", string(otpBytes))
+		data2fa.Add("otp", otp)
 
 		resp, err := ghc.client.PostForm(locationUrl, data2fa)
 		if err != nil {
