@@ -37,15 +37,15 @@ func ReadPassword(prompt string) (string, error) {
 	return strings.TrimSpace(pwd), nil
 }
 
-func GetResponseBody(r *http.Response) (string, bool) {
+func GetResponseBody(r *http.Response) (string, error) {
 	defer r.Body.Close()
 
 	rbytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		return "", false
+		return "", err
 	}
 
-	return string(rbytes), true
+	return string(rbytes), nil
 }
 
 func FindHiddenValue(key string, pageSource string) (string, bool) {

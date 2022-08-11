@@ -14,19 +14,19 @@ func main() {
 	// Load config variables from file.
 	cfg, ok := utils.GetConfig()
 	if !ok {
-		exit("Failed to load config.", 0)
+		exitf(0, "Failed to load config.")
 	}
 
 	// Initialize database connection.
 	db, ok := database.Initialize()
 	if !ok {
-		exit("Failed to initialize database client.", 0)
+		exitf(0, "Failed to initialize database client.")
 	}
 
 	// Initialize slack client used to send messages.
 	slackClient, ok := slack.Initialize()
 	if !ok {
-		exit("Failed to initialize slack client.", 0)
+		exitf(0, "Failed to initialize slack client.")
 	}
 
 	// Initialize client used to access github.
@@ -37,12 +37,12 @@ func main() {
 		cfg.GithubManualLogin,
 	)
 	if !ok {
-		exit("Failed to initialize github client.", 0)
+		exitf(0, "Failed to initialize github client.")
 	}
 
 	// Login to github via the client
-	if login := ghc.Login(); !login {
-		exit("Failed to login.", 0)
+	if err := ghc.Login(); err != nil {
+		exitf(0, "Failed to login to Github: %s", err)
 	}
 
 	prs := &PrSlacker{
@@ -54,7 +54,7 @@ func main() {
 	prs.Run()
 }
 
-func exit(msg string, code int) {
-	fmt.Println(msg)
+func exitf(code int, format string, a ...interface{}) {
+	fmt.Printf(format, a...)
 	os.Exit(code)
 }

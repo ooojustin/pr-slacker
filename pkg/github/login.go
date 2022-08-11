@@ -1,6 +1,7 @@
 package github
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -10,37 +11,43 @@ import (
 	"github.com/ooojustin/pr-puller/pkg/utils"
 )
 
-func (ghc *GithubClient) Login() bool {
+var (
+	MissingHiddenValueError = errors.New("Missing hidden value.")
+	InvalidCredentialsError = errors.New("Invalid credentials.")
+	Failed2FAError          = errors.New("Failed two factor authenticationship.")
+)
+
+func (ghc *GithubClient) Login() error {
 	resp, err := ghc.client.Get(GITHUB_URL + "login")
 	if err != nil {
-		return false
+		return err
 	}
 
 	if resp.StatusCode == 302 {
 		if locationUrl, err := resp.Location(); err == nil {
 			if locationUrl.String() == GITHUB_URL {
-				// Already logged in
-				return true
+				// Already logged in with this session
+				return nil
 			}
 		}
 	}
 
-	body, ok := utils.GetResponseBody(resp)
-	if !ok {
-		return false
+	body, err := utils.GetResponseBody(resp)
+	if err != nil {
+		return err
 	}
 
 	authenticity_token, ok1 := utils.FindHiddenValue("authenticity_token", body)
 	timestamp_secret, ok2 := utils.FindHiddenValue("timestamp_secret", body)
 	timestamp, ok3 := utils.FindHiddenValue("timestamp", body)
 	if !(ok1 && ok2 && ok3) {
-		return false
+		return MissingHiddenValueError
 	}
 
 	exp := regexp.MustCompile("<input type=\"text\" name=\"(required_field_.+?)\"")
 	fss := exp.FindStringSubmatch(body)
 	if len(fss) != 2 {
-		return false
+		return MissingHiddenValueError
 	}
 	required_field := fss[1]
 
@@ -67,13 +74,14 @@ func (ghc *GithubClient) Login() bool {
 
 	resp, err = ghc.client.PostForm(GITHUB_URL+"session", data)
 	if err != nil {
-		return false
+		return err
 	}
 
-	body, _ = utils.GetResponseBody(resp)
-	fail := strings.Contains(body, "Incorrect username or password.")
-	if fail {
-		return false
+	body, err = utils.GetResponseBody(resp)
+	if err != nil {
+		return err
+	} else if strings.Contains(body, "Incorrect username or password.") {
+		return InvalidCredentialsError
 	}
 
 	locationUrlObj, _ := resp.Location()
@@ -81,17 +89,27 @@ func (ghc *GithubClient) Login() bool {
 
 	_2fa := strings.HasSuffix(locationUrlStr, "two-factor")
 	if _2fa && !ghc.handle2FA(locationUrlStr) {
-		return false
+		return Failed2FAError
 	}
 
 	ghc.client.Jar.(*cookiejar.Jar).Save()
-	return true
+	return nil
 }
 
 func (ghc *GithubClient) handle2FA(locationUrl string) bool {
 	for {
-		resp2fa, _ := ghc.client.Get(locationUrl)
-		body2fa, _ := utils.GetResponseBody(resp2fa)
+		resp2fa, err := ghc.client.Get(locationUrl)
+		if err != nil {
+			fmt.Printf("Error loading %s:\n%s\n", locationUrl, err)
+			return false
+		}
+
+		body2fa, err := utils.GetResponseBody(resp2fa)
+		if err != nil {
+			fmt.Printf("Failed to read response body from %s:\n%s\n", locationUrl, err)
+			return false
+		}
+
 		authenticity_token, ok := utils.FindHiddenValue("authenticity_token", body2fa)
 		if !ok {
 			fmt.Println("Failed to find hidden value 'authenticity_token' (GithubClient.handle2FA)")
@@ -114,14 +132,13 @@ func (ghc *GithubClient) handle2FA(locationUrl string) bool {
 			return false
 		}
 
-		if resp.StatusCode == 200 {
-			// We are on the same page, aka it failed
-			fmt.Println("You've entered the incorrect 2FA code. Please try again.")
-		} else if resp.StatusCode == 302 {
+		if resp.StatusCode == 302 {
 			// It tried to redirect us, aka login succeeded
 			fmt.Println("Success! you are now logged into Github.")
 			return true
+		} else if resp.StatusCode == 200 {
+			// We are on the same page, aka it failed
+			fmt.Println("You've entered the incorrect 2FA code. Please try again.")
 		}
 	}
-	return false
 }
