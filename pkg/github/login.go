@@ -1,15 +1,15 @@
 package github
 
 import (
-	"bufio"
 	"fmt"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
+	"syscall"
 
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/ooojustin/pr-puller/pkg/utils"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func (ghc *GithubClient) Login() bool {
@@ -96,31 +96,38 @@ func (ghc *GithubClient) handle2FA(locationUrl string) bool {
 		body2fa, _ := utils.GetResponseBody(resp2fa)
 		authenticity_token, ok := utils.FindHiddenValue("authenticity_token", body2fa)
 		if !ok {
+			fmt.Println("Failed to find hidden value 'authenticity_token' (GithubClient.handle2FA)")
 			return false
 		}
 
-		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("2FA Code: ")
-		otp, _ := reader.ReadString('\n')
+		var stdin int = int(syscall.Stdin)
+		otpBytes, err := terminal.ReadPassword(stdin)
+		if err == nil {
+			fmt.Println()
+		} else {
+			fmt.Println("Failed to read 2FA code input.")
+			return false
+		}
 
 		data2fa := url.Values{}
 		data2fa.Add("authenticity_token", authenticity_token)
-		data2fa.Add("otp", otp)
+		data2fa.Add("otp", string(otpBytes))
 
 		resp, err := ghc.client.PostForm(locationUrl, data2fa)
 		if err != nil {
-			fmt.Println("2fa failed")
+			fmt.Println("2FA Failed for an unknown. Please try again.")
 			return false
 		}
 
 		if resp.StatusCode == 200 {
 			// We are on the same page, aka it failed
-			fmt.Println("you entered the wrong 2fa code")
+			fmt.Println("You've entered the incorrect 2FA code. Please try again.")
 		} else if resp.StatusCode == 302 {
 			// It tried to redirect us, aka login succeeded
-			fmt.Println("success! you are now logged in")
-			break
+			fmt.Println("Success! you are now logged into Github.")
+			return true
 		}
 	}
-	return true
+	return false
 }
